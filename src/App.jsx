@@ -90,32 +90,32 @@ function drawSticker(canvas, s) {
   const species = SPECIES.find((sp) => sp.key === s.species) || SPECIES[0];
   const gender = GENDERS.find((g) => g.key === s.gender) || GENDERS[2];
 
-  // ---- header band: one simple, huge message that reads in half a second ----
-  const headH = 175;
+  // ---- header band: thick, confident red block with one huge message ----
+  const headH = 200;
   ctx.fillStyle = T.alert;
   ctx.fillRect(0, 0, W, headH);
   ctx.fillStyle = "rgba(255,255,255,0.10)";
   ctx.beginPath();
   ctx.moveTo(640, headH);
-  ctx.lineTo(830, 40);
-  ctx.lineTo(880, 78);
-  ctx.lineTo(925, 40);
+  ctx.lineTo(830, 44);
+  ctx.lineTo(880, 84);
+  ctx.lineTo(925, 44);
   ctx.lineTo(1110, headH);
   ctx.closePath();
   ctx.fill();
 
   ctx.fillStyle = "rgba(255,255,255,0.92)";
   ctx.textAlign = "center";
-  ctx.font = `700 32px ${FAM}`;
-  ctx.fillText("緊急時 ペット救助のお願い", W / 2, 46);
+  ctx.font = `700 34px ${FAM}`;
+  ctx.fillText("緊急時 ペット救助のお願い", W / 2, 52);
   ctx.fillStyle = "#fff";
-  ctx.font = `900 104px ${FAM}`;
-  ctx.fillText("ペットがいます", W / 2, 152);
+  ctx.font = `900 108px ${FAM}`;
+  ctx.fillText("ペットがいます", W / 2, 168);
 
   // ---- photo: fills the frame edge to edge, no shadow ----
   const margin = 30;
   const PW = W - margin * 2,
-    PH = 620;
+    PH = 540;
   const px = margin,
     py = headH + 20;
   const halfW = PW / 2,
@@ -159,7 +159,7 @@ function drawSticker(canvas, s) {
   ctx.fillStyle = T.ink;
   ctx.font = `900 ${s.name.length > 8 ? 54 : 74}px ${FAM}`;
   ctx.fillText(s.name || "なまえ", W / 2, y);
-  y += 48;
+  y += 96;
 
   // ---- species / breed (primary line, matched weight to name) ----
   const primary = [`${species.icon} ${species.label}`];
@@ -167,7 +167,7 @@ function drawSticker(canvas, s) {
   ctx.font = `800 40px ${FAM}`;
   ctx.fillStyle = T.ink;
   ctx.fillText(primary.join("　"), W / 2, y);
-  y += 38;
+  y += 76;
 
   // ---- gender / age (secondary line) ----
   const secondary = [gender.label];
@@ -175,36 +175,37 @@ function drawSticker(canvas, s) {
   ctx.font = `700 28px ${FAM}`;
   ctx.fillStyle = T.sub;
   ctx.fillText(secondary.join("　・　"), W / 2, y);
-  y += 36;
+  y += 72;
 
-  // ---- features (personality / characteristics) ----
+  // ---- features (personality / characteristics) — one clear line, roomy ----
   if (s.features) {
     ctx.font = `500 27px ${FAM}`;
     ctx.fillStyle = T.sub;
-    const lines = wrapLines(ctx, s.features, W - 180, 2);
-    lines.forEach((l, i) => ctx.fillText(l, W / 2, y + i * 33));
-    y += lines.length * 33 + 12;
+    const [line] = wrapLines(ctx, s.features, W - 180, 1);
+    ctx.fillText(line, W / 2, y);
+    y += 57;
   }
 
-  // ---- allergy / medical note ----
+  // ---- allergy / medical note — one clear line ----
   if (s.allergy) {
     ctx.font = `700 24px ${FAM}`;
     ctx.fillStyle = T.alert;
-    const lines = wrapLines(ctx, `⚠ ${s.allergy}`, W - 180, 2);
-    lines.forEach((l, i) => ctx.fillText(l, W / 2, y + i * 27));
-    y += lines.length * 27;
+    const [line] = wrapLines(ctx, `⚠ ${s.allergy}`, W - 180, 1);
+    ctx.fillText(line, W / 2, y);
+    y += 27;
   }
 
-  // ---- contact card + logo: one footer block, evenly centered in the
-  // remaining space so the gap above the card and below the logo match ----
+  // ---- contact card + logo: one footer block. Most of the leftover space
+  // goes ABOVE the card so it sits lower, clearly separate from the info
+  // above it, while the card→logo gap stays small and fixed ----
   const cardX = 90,
     cardW = W - cardX * 2,
-    cardH = 180,
-    cardLogoGap = 34,
+    cardH = 175,
+    cardLogoGap = 30,
     logoH = 112;
   const footerBlockH = cardH + cardLogoGap + logoH;
   const slack = Math.max(0, H - y - footerBlockH);
-  const cardY = y + slack / 2;
+  const cardY = y + slack * 0.7;
 
   roundRect(ctx, cardX, cardY, cardW, cardH, 26);
   ctx.fillStyle = T.cream;
