@@ -91,131 +91,133 @@ function drawSticker(canvas, s) {
   const gender = GENDERS.find((g) => g.key === s.gender) || GENDERS[2];
 
   // ---- header band ----
-  const headH = 230;
+  const headH = 205;
   ctx.fillStyle = T.alert;
   ctx.fillRect(0, 0, W, headH);
   ctx.fillStyle = "rgba(255,255,255,0.10)";
   ctx.beginPath();
   ctx.moveTo(640, headH);
-  ctx.lineTo(830, 60);
-  ctx.lineTo(880, 105);
-  ctx.lineTo(925, 60);
+  ctx.lineTo(830, 50);
+  ctx.lineTo(880, 92);
+  ctx.lineTo(925, 50);
   ctx.lineTo(1110, headH);
   ctx.closePath();
   ctx.fill();
 
   ctx.fillStyle = "#fff";
   ctx.textAlign = "center";
-  ctx.font = `900 62px ${FAM}`;
-  ctx.fillText("緊急時 ペット救助のお願い", W / 2, 100);
-  ctx.font = `700 27px ${FAM}`;
-  ctx.fillText("IN CASE OF EMERGENCY — PET INSIDE", W / 2, 156);
-  ctx.font = `700 26px ${FAM}`;
+  ctx.font = `900 58px ${FAM}`;
+  ctx.fillText("緊急時 ペット救助のお願い", W / 2, 90);
+  ctx.font = `700 25px ${FAM}`;
+  ctx.fillText("IN CASE OF EMERGENCY — PET INSIDE", W / 2, 140);
+  ctx.font = `700 24px ${FAM}`;
   ctx.fillStyle = "rgba(255,255,255,0.9)";
-  ctx.fillText("この家に、いのちがいます", W / 2, 200);
+  ctx.fillText("この家に、いのちがいます", W / 2, 180);
 
-  // ---- photo circle ----
-  const cx = W / 2,
-    cy = 452,
-    r = 200;
-  ctx.beginPath();
-  ctx.arc(cx, cy, r + 14, 0, Math.PI * 2);
+  // ---- photo (rounded square, sized up for at-a-glance ID) ----
+  const S = 640;
+  const px = (W - S) / 2,
+    py = 225;
+  const half = S / 2,
+    pcx = px + half,
+    pcy = py + half;
+  roundRect(ctx, px - 12, py - 12, S + 24, S + 24, 36);
   ctx.fillStyle = T.alert;
   ctx.fill();
-  ctx.beginPath();
-  ctx.arc(cx, cy, r + 5, 0, Math.PI * 2);
+  roundRect(ctx, px - 4, py - 4, S + 8, S + 8, 30);
   ctx.fillStyle = "#fff";
   ctx.fill();
 
   ctx.save();
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  roundRect(ctx, px, py, S, S, 26);
   ctx.clip();
   if (s.img) {
     const img = s.img;
-    const scale =
-      Math.max((r * 2) / img.width, (r * 2) / img.height) * s.zoom;
+    const scale = Math.max(S / img.width, S / img.height) * s.zoom;
     const dw = img.width * scale,
       dh = img.height * scale;
     ctx.drawImage(
       img,
-      cx - dw / 2 + s.offX * r,
-      cy - dh / 2 + s.offY * r,
+      pcx - dw / 2 + s.offX * half,
+      pcy - dh / 2 + s.offY * half,
       dw,
       dh
     );
   } else {
     ctx.fillStyle = T.cream;
-    ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
-    ctx.font = `500 130px ${FAM}`;
+    ctx.fillRect(px, py, S, S);
+    ctx.font = `500 160px ${FAM}`;
     ctx.textAlign = "center";
     ctx.fillStyle = "#e5b8ab";
-    ctx.fillText("🐾", cx, cy + 48);
+    ctx.fillText("🐾", pcx, pcy + 56);
   }
   ctx.restore();
 
-  let y = cy + r + 70;
+  let y = py + S + 65;
 
   // ---- name ----
   ctx.textAlign = "center";
   ctx.fillStyle = T.ink;
-  ctx.font = `900 ${s.name.length > 8 ? 54 : 72}px ${FAM}`;
+  ctx.font = `900 ${s.name.length > 8 ? 56 : 76}px ${FAM}`;
   ctx.fillText(s.name || "なまえ", W / 2, y);
-  y += 50;
+  y += 52;
 
-  // ---- species / breed / gender / age ----
-  const metaParts = [`${species.icon} ${species.label}`];
-  if (s.breed) metaParts.push(s.breed);
-  metaParts.push(gender.label);
-  if (s.age) metaParts.push(s.age);
-  ctx.font = `700 34px ${FAM}`;
+  // ---- species / breed (primary line, matched weight to name) ----
+  const primary = [`${species.icon} ${species.label}`];
+  if (s.breed) primary.push(s.breed);
+  ctx.font = `800 42px ${FAM}`;
   ctx.fillStyle = T.ink;
-  ctx.fillText(metaParts.join("　・　"), W / 2, y);
-  y += 56;
+  ctx.fillText(primary.join("　"), W / 2, y);
+  y += 44;
+
+  // ---- gender / age (secondary line) ----
+  const secondary = [gender.label];
+  if (s.age) secondary.push(s.age);
+  ctx.font = `700 30px ${FAM}`;
+  ctx.fillStyle = T.sub;
+  ctx.fillText(secondary.join("　・　"), W / 2, y);
+  y += 38;
 
   // ---- features (personality / characteristics) ----
   if (s.features) {
-    ctx.font = `500 30px ${FAM}`;
+    ctx.font = `500 28px ${FAM}`;
     ctx.fillStyle = T.sub;
     const lines = wrapLines(ctx, s.features, W - 140, 2);
-    lines.forEach((l, i) => ctx.fillText(l, W / 2, y + i * 40));
-    y += lines.length * 40 + 14;
+    lines.forEach((l, i) => ctx.fillText(l, W / 2, y + i * 36));
+    y += lines.length * 36 + 12;
   }
 
   // ---- allergy / medical note ----
   if (s.allergy) {
-    ctx.font = `700 26px ${FAM}`;
+    ctx.font = `700 25px ${FAM}`;
     ctx.fillStyle = T.alert;
     const lines = wrapLines(ctx, `⚠ ${s.allergy}`, W - 140, 2);
-    lines.forEach((l, i) => ctx.fillText(l, W / 2, y + i * 34));
-    y += lines.length * 34;
+    lines.forEach((l, i) => ctx.fillText(l, W / 2, y + i * 30));
+    y += lines.length * 30;
   }
 
   // ---- contact band ----
-  const bandY = Math.min(1220, Math.max(1080, y + 60));
+  const bandY = Math.min(1240, Math.max(1130, y + 50));
   ctx.fillStyle = T.cream;
   ctx.fillRect(0, bandY, W, H - bandY);
   ctx.fillStyle = T.alert;
-  ctx.font = `700 30px ${FAM}`;
-  ctx.fillText("緊急連絡先 EMERGENCY CONTACT", W / 2, bandY + 52);
+  ctx.font = `700 28px ${FAM}`;
+  ctx.fillText("緊急連絡先 EMERGENCY CONTACT", W / 2, bandY + 46);
   ctx.fillStyle = T.ink;
-  ctx.font = `900 60px ${FAM}`;
-  ctx.fillText(s.phone || "090-0000-0000", W / 2, bandY + 122);
+  ctx.font = `900 58px ${FAM}`;
+  ctx.fillText(s.phone || "090-0000-0000", W / 2, bandY + 112);
   if (s.vet) {
-    ctx.font = `500 26px ${FAM}`;
+    ctx.font = `500 25px ${FAM}`;
     ctx.fillStyle = T.sub;
-    ctx.fillText(`かかりつけ：${s.vet}`, W / 2, bandY + 164);
+    ctx.fillText(`かかりつけ：${s.vet}`, W / 2, bandY + 152);
   }
 
   // ---- footer logo ----
   if (s.logo) {
-    const lh = 40;
+    const lh = 68;
     const lw = (s.logo.width / s.logo.height) * lh;
-    ctx.drawImage(s.logo, W / 2 - lw / 2, H - 78, lw, lh);
+    ctx.drawImage(s.logo, W / 2 - lw / 2, H - lh - 16, lw, lh);
   }
-  ctx.font = `700 20px ${FAM}`;
-  ctx.fillStyle = "#b7ac9a";
-  ctx.fillText("MaNiYa × やまなし火山防災", W / 2, H - 24);
 
   ctx.restore();
   // border
@@ -422,7 +424,7 @@ export default function App() {
         <img
           src={logoSrc}
           alt="MaNiYa"
-          style={{ height: 22, display: "block", marginBottom: 10 }}
+          style={{ height: 40, display: "block", marginBottom: 10 }}
         />
         <h1
           style={{
@@ -653,19 +655,6 @@ export default function App() {
             >
               ステッカー画像を保存（PNG・L判サイズ）
             </button>
-            <p
-              style={{
-                fontSize: 12.5,
-                color: T.sub,
-                lineHeight: 1.8,
-                margin: "12px 4px 0",
-              }}
-            >
-              💡 L判（89×127mm・300dpi）で書き出されます。コンビニのマルチコピー機
-              「写真プリント（L判）」でそのまま印刷OK（1枚約40円）。
-              玄関ドアなど屋外に貼る場合は、耐水ラミネートや
-              ソフトケースに入れるのがおすすめです。
-            </p>
           </div>
         </section>
       </main>
