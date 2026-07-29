@@ -90,51 +90,45 @@ function drawSticker(canvas, s) {
   const species = SPECIES.find((sp) => sp.key === s.species) || SPECIES[0];
   const gender = GENDERS.find((g) => g.key === s.gender) || GENDERS[2];
 
-  // ---- header band ----
-  const headH = 190;
+  // ---- header band: one simple, huge message that reads in half a second ----
+  const headH = 175;
   ctx.fillStyle = T.alert;
   ctx.fillRect(0, 0, W, headH);
   ctx.fillStyle = "rgba(255,255,255,0.10)";
   ctx.beginPath();
   ctx.moveTo(640, headH);
-  ctx.lineTo(830, 46);
-  ctx.lineTo(880, 86);
-  ctx.lineTo(925, 46);
+  ctx.lineTo(830, 40);
+  ctx.lineTo(880, 78);
+  ctx.lineTo(925, 40);
   ctx.lineTo(1110, headH);
   ctx.closePath();
   ctx.fill();
 
-  ctx.fillStyle = "#fff";
+  ctx.fillStyle = "rgba(255,255,255,0.92)";
   ctx.textAlign = "center";
-  ctx.font = `900 54px ${FAM}`;
-  ctx.fillText("緊急時 ペット救助のお願い", W / 2, 82);
-  ctx.font = `700 23px ${FAM}`;
-  ctx.fillText("IN CASE OF EMERGENCY — PET INSIDE", W / 2, 128);
-  ctx.font = `700 22px ${FAM}`;
-  ctx.fillStyle = "rgba(255,255,255,0.9)";
-  ctx.fillText("この家に、いのちがいます", W / 2, 165);
+  ctx.font = `700 32px ${FAM}`;
+  ctx.fillText("緊急時 ペット救助のお願い", W / 2, 46);
+  ctx.fillStyle = "#fff";
+  ctx.font = `900 104px ${FAM}`;
+  ctx.fillText("ペットがいます", W / 2, 152);
 
-  // ---- photo (landscape rounded rectangle, no color ring — soft shadow instead) ----
-  const PW = 860,
-    PH = 540;
-  const px = (W - PW) / 2,
-    py = 216;
+  // ---- photo: fills the frame edge to edge, no shadow ----
+  const margin = 30;
+  const PW = W - margin * 2,
+    PH = 620;
+  const px = margin,
+    py = headH + 20;
   const halfW = PW / 2,
     halfH = PH / 2,
     pcx = px + halfW,
     pcy = py + halfH;
 
-  ctx.save();
-  ctx.shadowColor = "rgba(51,48,43,0.20)";
-  ctx.shadowBlur = 22;
-  ctx.shadowOffsetY = 8;
-  roundRect(ctx, px, py, PW, PH, 28);
+  roundRect(ctx, px, py, PW, PH, 24);
   ctx.fillStyle = "#fff";
   ctx.fill();
-  ctx.restore();
 
   ctx.save();
-  roundRect(ctx, px, py, PW, PH, 28);
+  roundRect(ctx, px, py, PW, PH, 24);
   ctx.clip();
   if (s.img) {
     const img = s.img;
@@ -151,26 +145,21 @@ function drawSticker(canvas, s) {
   } else {
     ctx.fillStyle = T.cream;
     ctx.fillRect(px, py, PW, PH);
-    ctx.font = `500 120px ${FAM}`;
+    ctx.font = `500 140px ${FAM}`;
     ctx.textAlign = "center";
     ctx.fillStyle = "#e5b8ab";
-    ctx.fillText("🐾", pcx, pcy + 42);
+    ctx.fillText("🐾", pcx, pcy + 48);
   }
   ctx.restore();
 
-  roundRect(ctx, px, py, PW, PH, 28);
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = T.line;
-  ctx.stroke();
-
-  let y = py + PH + 88;
+  let y = py + PH + 68;
 
   // ---- name ----
   ctx.textAlign = "center";
   ctx.fillStyle = T.ink;
   ctx.font = `900 ${s.name.length > 8 ? 54 : 74}px ${FAM}`;
   ctx.fillText(s.name || "なまえ", W / 2, y);
-  y += 52;
+  y += 48;
 
   // ---- species / breed (primary line, matched weight to name) ----
   const primary = [`${species.icon} ${species.label}`];
@@ -178,7 +167,7 @@ function drawSticker(canvas, s) {
   ctx.font = `800 40px ${FAM}`;
   ctx.fillStyle = T.ink;
   ctx.fillText(primary.join("　"), W / 2, y);
-  y += 42;
+  y += 38;
 
   // ---- gender / age (secondary line) ----
   const secondary = [gender.label];
@@ -193,8 +182,8 @@ function drawSticker(canvas, s) {
     ctx.font = `500 27px ${FAM}`;
     ctx.fillStyle = T.sub;
     const lines = wrapLines(ctx, s.features, W - 180, 2);
-    lines.forEach((l, i) => ctx.fillText(l, W / 2, y + i * 34));
-    y += lines.length * 34 + 12;
+    lines.forEach((l, i) => ctx.fillText(l, W / 2, y + i * 33));
+    y += lines.length * 33 + 12;
   }
 
   // ---- allergy / medical note ----
@@ -202,35 +191,52 @@ function drawSticker(canvas, s) {
     ctx.font = `700 24px ${FAM}`;
     ctx.fillStyle = T.alert;
     const lines = wrapLines(ctx, `⚠ ${s.allergy}`, W - 180, 2);
-    lines.forEach((l, i) => ctx.fillText(l, W / 2, y + i * 28));
-    y += lines.length * 28;
+    lines.forEach((l, i) => ctx.fillText(l, W / 2, y + i * 27));
+    y += lines.length * 27;
   }
 
-  // ---- contact card (inset, not full-bleed, to keep it from feeling too wide) ----
+  // ---- contact card + logo: one footer block, evenly centered in the
+  // remaining space so the gap above the card and below the logo match ----
   const cardX = 90,
     cardW = W - cardX * 2,
-    cardH = 200;
-  const cardY = Math.min(1190, Math.max(1080, y + 46));
+    cardH = 180,
+    cardLogoGap = 34,
+    logoH = 112;
+  const footerBlockH = cardH + cardLogoGap + logoH;
+  const slack = Math.max(0, H - y - footerBlockH);
+  const cardY = y + slack / 2;
+
   roundRect(ctx, cardX, cardY, cardW, cardH, 26);
   ctx.fillStyle = T.cream;
   ctx.fill();
+
+  const hasVet = !!s.vet;
   ctx.fillStyle = T.alert;
   ctx.font = `700 26px ${FAM}`;
-  ctx.fillText("緊急連絡先 EMERGENCY CONTACT", W / 2, cardY + 46);
+  ctx.fillText(
+    "緊急連絡先 EMERGENCY CONTACT",
+    W / 2,
+    cardY + (hasVet ? 44 : 58)
+  );
   ctx.fillStyle = T.ink;
   ctx.font = `900 56px ${FAM}`;
-  ctx.fillText(s.phone || "090-0000-0000", W / 2, cardY + 112);
-  if (s.vet) {
+  ctx.fillText(s.phone || "090-0000-0000", W / 2, cardY + (hasVet ? 110 : 128));
+  if (hasVet) {
     ctx.font = `500 24px ${FAM}`;
     ctx.fillStyle = T.sub;
-    ctx.fillText(`かかりつけ：${s.vet}`, W / 2, cardY + 152);
+    ctx.fillText(`かかりつけ：${s.vet}`, W / 2, cardY + 150);
   }
 
   // ---- footer logo ----
   if (s.logo) {
-    const lh = 100;
-    const lw = (s.logo.width / s.logo.height) * lh;
-    ctx.drawImage(s.logo, W / 2 - lw / 2, H - lh - 22, lw, lh);
+    const lw = (s.logo.width / s.logo.height) * logoH;
+    ctx.drawImage(
+      s.logo,
+      W / 2 - lw / 2,
+      cardY + cardH + cardLogoGap,
+      lw,
+      logoH
+    );
   }
 
   ctx.restore();
@@ -438,7 +444,7 @@ export default function App() {
         <img
           src={logoSrc}
           alt="MaNiYa"
-          style={{ height: 54, display: "block", marginBottom: 12 }}
+          style={{ height: 64, display: "block", marginBottom: 12 }}
         />
         <h1
           style={{
