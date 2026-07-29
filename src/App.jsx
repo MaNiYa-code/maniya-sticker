@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import logoSrc from "./assets/maniya-logo.png";
 
 // ---- MaNiYa brand tokens ----
 const T = {
@@ -15,6 +16,58 @@ const T = {
 const FONT_LINK =
   "https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap";
 const FAM = '"Zen Maru Gothic", "Hiragino Maru Gothic ProN", sans-serif';
+
+const SPECIES = [
+  { key: "dog", icon: "🐕", label: "犬", breedLabel: "犬種" },
+  { key: "cat", icon: "🐈", label: "猫", breedLabel: "猫種" },
+  { key: "other", icon: "🐾", label: "その他", breedLabel: "種類" },
+];
+
+const GENDERS = [
+  { key: "male", label: "オス" },
+  { key: "female", label: "メス" },
+  { key: "unknown", label: "不明" },
+];
+
+// ---------- canvas helpers ----------
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+// wraps text to a max number of lines, truncating the last line with … if needed
+function wrapLines(ctx, text, maxWidth, maxLines) {
+  if (!text) return [];
+  const chars = Array.from(text);
+  const lines = [];
+  let line = "";
+  for (const ch of chars) {
+    const test = line + ch;
+    if (ctx.measureText(test).width > maxWidth && line) {
+      lines.push(line);
+      line = ch;
+      if (lines.length === maxLines) break;
+    } else {
+      line = test;
+    }
+  }
+  if (lines.length < maxLines && line) lines.push(line);
+  if (lines.length === maxLines) {
+    let last = lines[maxLines - 1];
+    while (ctx.measureText(last + "…").width > maxWidth && last.length > 0) {
+      last = last.slice(0, -1);
+    }
+    const consumed = lines.slice(0, -1).join("").length + last.length;
+    if (consumed < chars.length) last += "…";
+    lines[maxLines - 1] = last;
+  }
+  return lines;
+}
 
 // ---------- canvas sticker renderer ----------
 // L判 89×127mm @300dpi ≒ 1050×1500px（コンビニ写真プリント対応）
@@ -34,41 +87,43 @@ function drawSticker(canvas, s) {
   roundRect(ctx, 0, 0, W, H, R);
   ctx.clip();
 
+  const species = SPECIES.find((sp) => sp.key === s.species) || SPECIES[0];
+  const gender = GENDERS.find((g) => g.key === s.gender) || GENDERS[2];
+
   // ---- header band ----
-  const headH = 290;
+  const headH = 230;
   ctx.fillStyle = T.alert;
   ctx.fillRect(0, 0, W, headH);
-  // subtle Fuji silhouette
   ctx.fillStyle = "rgba(255,255,255,0.10)";
   ctx.beginPath();
   ctx.moveTo(640, headH);
-  ctx.lineTo(830, 80);
-  ctx.lineTo(880, 130);
-  ctx.lineTo(925, 80);
+  ctx.lineTo(830, 60);
+  ctx.lineTo(880, 105);
+  ctx.lineTo(925, 60);
   ctx.lineTo(1110, headH);
   ctx.closePath();
   ctx.fill();
 
   ctx.fillStyle = "#fff";
   ctx.textAlign = "center";
-  ctx.font = `900 68px ${FAM}`;
-  ctx.fillText("緊急時 ペット救助のお願い", W / 2, 122);
-  ctx.font = `700 30px ${FAM}`;
-  ctx.fillText("IN CASE OF EMERGENCY — PETS INSIDE", W / 2, 188);
-  ctx.font = `700 28px ${FAM}`;
+  ctx.font = `900 62px ${FAM}`;
+  ctx.fillText("緊急時 ペット救助のお願い", W / 2, 100);
+  ctx.font = `700 27px ${FAM}`;
+  ctx.fillText("IN CASE OF EMERGENCY — PET INSIDE", W / 2, 156);
+  ctx.font = `700 26px ${FAM}`;
   ctx.fillStyle = "rgba(255,255,255,0.9)";
-  ctx.fillText("この家に、いのちがいます", W / 2, 244);
+  ctx.fillText("この家に、いのちがいます", W / 2, 200);
 
   // ---- photo circle ----
   const cx = W / 2,
-    cy = 610,
-    r = 265;
+    cy = 452,
+    r = 200;
   ctx.beginPath();
-  ctx.arc(cx, cy, r + 16, 0, Math.PI * 2);
+  ctx.arc(cx, cy, r + 14, 0, Math.PI * 2);
   ctx.fillStyle = T.alert;
   ctx.fill();
   ctx.beginPath();
-  ctx.arc(cx, cy, r + 6, 0, Math.PI * 2);
+  ctx.arc(cx, cy, r + 5, 0, Math.PI * 2);
   ctx.fillStyle = "#fff";
   ctx.fill();
 
@@ -92,47 +147,75 @@ function drawSticker(canvas, s) {
   } else {
     ctx.fillStyle = T.cream;
     ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
-    ctx.font = `500 160px ${FAM}`;
+    ctx.font = `500 130px ${FAM}`;
     ctx.textAlign = "center";
     ctx.fillStyle = "#e5b8ab";
-    ctx.fillText("🐾", cx, cy + 60);
+    ctx.fillText("🐾", cx, cy + 48);
   }
   ctx.restore();
+
+  let y = cy + r + 70;
 
   // ---- name ----
   ctx.textAlign = "center";
   ctx.fillStyle = T.ink;
-  ctx.font = `900 ${s.name.length > 8 ? 62 : 84}px ${FAM}`;
-  ctx.fillText(s.name || "なまえ", W / 2, 1000);
+  ctx.font = `900 ${s.name.length > 8 ? 54 : 72}px ${FAM}`;
+  ctx.fillText(s.name || "なまえ", W / 2, y);
+  y += 50;
 
-  // ---- species counts ----
-  const parts = [];
-  if (s.dog > 0) parts.push(`🐕 犬 ${s.dog}`);
-  if (s.cat > 0) parts.push(`🐈 猫 ${s.cat}`);
-  if (s.other > 0) parts.push(`🐾 その他 ${s.other}`);
-  ctx.font = `700 44px ${FAM}`;
+  // ---- species / breed / gender / age ----
+  const metaParts = [`${species.icon} ${species.label}`];
+  if (s.breed) metaParts.push(s.breed);
+  metaParts.push(gender.label);
+  if (s.age) metaParts.push(s.age);
+  ctx.font = `700 34px ${FAM}`;
   ctx.fillStyle = T.ink;
-  ctx.fillText(parts.length ? parts.join("　") : "🐕 犬 1", W / 2, 1078);
+  ctx.fillText(metaParts.join("　・　"), W / 2, y);
+  y += 56;
+
+  // ---- features (personality / characteristics) ----
+  if (s.features) {
+    ctx.font = `500 30px ${FAM}`;
+    ctx.fillStyle = T.sub;
+    const lines = wrapLines(ctx, s.features, W - 140, 2);
+    lines.forEach((l, i) => ctx.fillText(l, W / 2, y + i * 40));
+    y += lines.length * 40 + 14;
+  }
+
+  // ---- allergy / medical note ----
+  if (s.allergy) {
+    ctx.font = `700 26px ${FAM}`;
+    ctx.fillStyle = T.alert;
+    const lines = wrapLines(ctx, `⚠ ${s.allergy}`, W - 140, 2);
+    lines.forEach((l, i) => ctx.fillText(l, W / 2, y + i * 34));
+    y += lines.length * 34;
+  }
 
   // ---- contact band ----
-  const bandY = 1140;
+  const bandY = Math.min(1220, Math.max(1080, y + 60));
   ctx.fillStyle = T.cream;
   ctx.fillRect(0, bandY, W, H - bandY);
   ctx.fillStyle = T.alert;
-  ctx.font = `700 32px ${FAM}`;
-  ctx.fillText("緊急連絡先 EMERGENCY CONTACT", W / 2, bandY + 58);
+  ctx.font = `700 30px ${FAM}`;
+  ctx.fillText("緊急連絡先 EMERGENCY CONTACT", W / 2, bandY + 52);
   ctx.fillStyle = T.ink;
-  ctx.font = `900 64px ${FAM}`;
-  ctx.fillText(s.phone || "090-0000-0000", W / 2, bandY + 134);
+  ctx.font = `900 60px ${FAM}`;
+  ctx.fillText(s.phone || "090-0000-0000", W / 2, bandY + 122);
   if (s.vet) {
-    ctx.font = `500 28px ${FAM}`;
+    ctx.font = `500 26px ${FAM}`;
     ctx.fillStyle = T.sub;
-    ctx.fillText(`かかりつけ：${s.vet}`, W / 2, bandY + 182);
+    ctx.fillText(`かかりつけ：${s.vet}`, W / 2, bandY + 164);
   }
-  // footer credit
-  ctx.font = `700 22px ${FAM}`;
+
+  // ---- footer logo ----
+  if (s.logo) {
+    const lh = 40;
+    const lw = (s.logo.width / s.logo.height) * lh;
+    ctx.drawImage(s.logo, W / 2 - lw / 2, H - 78, lw, lh);
+  }
+  ctx.font = `700 20px ${FAM}`;
   ctx.fillStyle = "#b7ac9a";
-  ctx.fillText("MaNiYa × やまなし火山防災", W / 2, H - 36);
+  ctx.fillText("MaNiYa × やまなし火山防災", W / 2, H - 24);
 
   ctx.restore();
   // border
@@ -140,16 +223,6 @@ function drawSticker(canvas, s) {
   ctx.lineWidth = 12;
   ctx.strokeStyle = T.alert;
   ctx.stroke();
-}
-
-function roundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
 }
 
 // ---------- small UI atoms ----------
@@ -188,45 +261,40 @@ const inputStyle = {
   outline: "none",
 };
 
-function Counter({ icon, label, value, onChange }) {
-  const btn = {
-    width: 34,
-    height: 34,
-    borderRadius: 12,
-    border: `1.5px solid ${T.line}`,
-    background: "#fff",
-    fontSize: 18,
-    fontWeight: 700,
-    color: T.ink,
-    cursor: "pointer",
-    lineHeight: 1,
-  };
+const textareaStyle = {
+  ...inputStyle,
+  minHeight: 84,
+  resize: "vertical",
+  lineHeight: 1.6,
+};
+
+function SegmentedGroup({ options, value, onChange, renderLabel }) {
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        background: "#fff",
-        border: `1.5px solid ${T.line}`,
-        borderRadius: 14,
-        padding: "10px 14px",
-      }}
-    >
-      <span style={{ fontSize: 15, fontWeight: 700 }}>
-        {icon} {label}
-      </span>
-      <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <button style={btn} onClick={() => onChange(Math.max(0, value - 1))}>
-          −
-        </button>
-        <span style={{ minWidth: 20, textAlign: "center", fontWeight: 900 }}>
-          {value}
-        </span>
-        <button style={btn} onClick={() => onChange(Math.min(9, value + 1))}>
-          ＋
-        </button>
-      </span>
+    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+      {options.map((opt) => {
+        const active = opt.key === value;
+        return (
+          <button
+            key={opt.key}
+            type="button"
+            onClick={() => onChange(opt.key)}
+            style={{
+              flex: "1 1 0",
+              padding: "12px 10px",
+              fontSize: 15,
+              fontFamily: FAM,
+              fontWeight: 700,
+              color: active ? "#fff" : T.ink,
+              background: active ? T.alert : "#fff",
+              border: `1.5px solid ${active ? T.alert : T.line}`,
+              borderRadius: 14,
+              cursor: "pointer",
+            }}
+          >
+            {renderLabel ? renderLabel(opt) : opt.label}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -238,12 +306,16 @@ export default function App() {
   const [offX, setOffX] = useState(0);
   const [offY, setOffY] = useState(0);
   const [name, setName] = useState("");
-  const [dog, setDog] = useState(1);
-  const [cat, setCat] = useState(0);
-  const [other, setOther] = useState(0);
+  const [species, setSpecies] = useState("dog");
+  const [breed, setBreed] = useState("");
+  const [gender, setGender] = useState("unknown");
+  const [age, setAge] = useState("");
+  const [features, setFeatures] = useState("");
+  const [allergy, setAllergy] = useState("");
   const [phone, setPhone] = useState("");
   const [vet, setVet] = useState("");
   const [fontsReady, setFontsReady] = useState(false);
+  const [logoImg, setLogoImg] = useState(null);
   const canvasRef = useRef(null);
   const fileRef = useRef(null);
 
@@ -260,6 +332,15 @@ export default function App() {
     } else setFontsReady(true);
   }, []);
 
+  // preload MaNiYa logo for canvas drawing
+  useEffect(() => {
+    const im = new Image();
+    im.onload = () => setLogoImg(im);
+    im.src = logoSrc;
+  }, []);
+
+  const currentSpecies = SPECIES.find((sp) => sp.key === species) || SPECIES[0];
+
   const redraw = useCallback(() => {
     if (canvasRef.current)
       drawSticker(canvasRef.current, {
@@ -268,13 +349,33 @@ export default function App() {
         offX,
         offY,
         name,
-        dog,
-        cat,
-        other,
+        species,
+        breed,
+        gender,
+        age,
+        features,
+        allergy,
         phone,
         vet,
+        logo: logoImg,
       });
-  }, [img, zoom, offX, offY, name, dog, cat, other, phone, vet, fontsReady]);
+  }, [
+    img,
+    zoom,
+    offX,
+    offY,
+    name,
+    species,
+    breed,
+    gender,
+    age,
+    features,
+    allergy,
+    phone,
+    vet,
+    logoImg,
+    fontsReady,
+  ]);
 
   useEffect(() => {
     redraw();
@@ -318,16 +419,11 @@ export default function App() {
       <header
         style={{ maxWidth: 1060, margin: "0 auto", padding: "40px 24px 8px" }}
       >
-        <div
-          style={{
-            fontSize: 12,
-            fontWeight: 700,
-            letterSpacing: "0.18em",
-            color: T.alert,
-          }}
-        >
-          MaNiYa × やまなし火山防災
-        </div>
+        <img
+          src={logoSrc}
+          alt="MaNiYa"
+          style={{ height: 22, display: "block", marginBottom: 10 }}
+        />
         <h1
           style={{
             fontSize: "clamp(26px, 4vw, 38px)",
@@ -340,8 +436,8 @@ export default function App() {
         </h1>
         <p style={{ margin: 0, color: T.sub, fontSize: 15, lineHeight: 1.8 }}>
           災害時、「家の中にペットがいる」ことを救助者に伝えるステッカーを、
-          写真1枚でつくれます。L判サイズなので、コンビニの写真プリントで
-          そのまま印刷できます。
+          写真1枚でつくれます。1枚につき1匹分の情報を記入してください。
+          L判サイズなので、コンビニの写真プリントでそのまま印刷できます。
         </p>
       </header>
 
@@ -427,7 +523,7 @@ export default function App() {
             </Field>
           )}
 
-          <Field label="② なまえ" hint="複数いる場合は「モコ・クッキー」のように">
+          <Field label="② なまえ">
             <input
               style={inputStyle}
               value={name}
@@ -437,20 +533,63 @@ export default function App() {
             />
           </Field>
 
-          <Field label="③ 家にいる子の数">
-            <div style={{ display: "grid", gap: 10 }}>
-              <Counter icon="🐕" label="犬" value={dog} onChange={setDog} />
-              <Counter icon="🐈" label="猫" value={cat} onChange={setCat} />
-              <Counter
-                icon="🐾"
-                label="その他"
-                value={other}
-                onChange={setOther}
-              />
-            </div>
+          <Field label="③ 種類（1枚につき1匹）">
+            <SegmentedGroup
+              options={SPECIES}
+              value={species}
+              onChange={setSpecies}
+              renderLabel={(o) => `${o.icon} ${o.label}`}
+            />
           </Field>
 
-          <Field label="④ 緊急連絡先（電話番号）">
+          <Field label={`④ ${currentSpecies.breedLabel}`} hint="例：柴犬、ミックスなど">
+            <input
+              style={inputStyle}
+              value={breed}
+              maxLength={20}
+              placeholder="柴犬"
+              onChange={(e) => setBreed(e.target.value)}
+            />
+          </Field>
+
+          <Field label="⑤ 性別">
+            <SegmentedGroup options={GENDERS} value={gender} onChange={setGender} />
+          </Field>
+
+          <Field label="⑥ 年齢（任意）">
+            <input
+              style={inputStyle}
+              value={age}
+              maxLength={10}
+              placeholder="3歳"
+              onChange={(e) => setAge(e.target.value)}
+            />
+          </Field>
+
+          <Field
+            label="⑦ 特徴・性格"
+            hint="首輪の色、性格、注意点など。長めに書けます"
+          >
+            <textarea
+              style={textareaStyle}
+              value={features}
+              maxLength={80}
+              placeholder="人懐っこい／赤い首輪をしている／臆病なので驚かせないでください　など"
+              onChange={(e) => setFeatures(e.target.value)}
+            />
+          </Field>
+
+          <Field label="⑧ アレルギー・持病など（任意）">
+            <textarea
+              style={{ ...textareaStyle, minHeight: 64 }}
+              value={allergy}
+              maxLength={60}
+              placeholder="鶏肉アレルギーあり／投薬中　など"
+              onChange={(e) => setAllergy(e.target.value)}
+            />
+          </Field>
+
+          <Field label="⑨ 緊急連絡先（電話番号）">
             <input
               style={inputStyle}
               value={phone}
@@ -460,7 +599,7 @@ export default function App() {
             />
           </Field>
 
-          <Field label="⑤ かかりつけ動物病院（任意）">
+          <Field label="⑩ かかりつけ動物病院（任意）">
             <input
               style={inputStyle}
               value={vet}
@@ -536,7 +675,7 @@ export default function App() {
           main { grid-template-columns: 1fr !important; }
           section[style*="sticky"] { position: static !important; }
         }
-        button:focus-visible, input:focus-visible {
+        button:focus-visible, input:focus-visible, textarea:focus-visible {
           outline: 3px solid ${T.accent}; outline-offset: 2px;
         }
       `}</style>
