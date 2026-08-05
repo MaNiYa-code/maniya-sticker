@@ -411,33 +411,59 @@ export default function App() {
     reader.readAsDataURL(f);
   };
 
+  const openInNewTab = () => {
+    // Last-resort fallback: open the PNG as its own page so the user can
+    // long-press (mobile) or right-click (desktop) and save it manually.
+    const url = canvasRef.current.toDataURL("image/png");
+    const win = window.open();
+    if (win) {
+      win.document.write(
+        `<title>rescue-sticker</title><body style="margin:0;background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh"><img src="${url}" style="max-width:100%;height:auto" /></body>`
+      );
+    } else {
+      window.location.href = url;
+    }
+  };
+
   const download = () => {
     const filename = `rescue-sticker_${name || "pet"}.png`;
-    canvasRef.current.toBlob(async (blob) => {
-      if (!blob) return;
-      const file = new File([blob], filename, { type: "image/png" });
-
-      // Mobile browsers (iOS Safari especially) don't reliably support
-      // <a download> — it just opens the image instead of saving it.
-      // The share sheet's "Save Image" option is the reliable path there.
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        try {
-          await navigator.share({ files: [file], title: filename });
+    try {
+      canvasRef.current.toBlob(async (blob) => {
+        if (!blob) {
+          openInNewTab();
           return;
-        } catch (err) {
-          if (err && err.name === "AbortError") return;
         }
-      }
+        const file = new File([blob], filename, { type: "image/png" });
 
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-    }, "image/png");
+        // Mobile browsers (iOS Safari especially) don't reliably support
+        // <a download> — it just opens the image instead of saving it.
+        // The share sheet's "Save Image" option is the reliable path there.
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({ files: [file], title: filename });
+            return;
+          } catch (err) {
+            if (err && err.name === "AbortError") return;
+            // share failed for another reason — fall through to download
+          }
+        }
+
+        try {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+        } catch {
+          openInNewTab();
+        }
+      }, "image/png");
+    } catch {
+      openInNewTab();
+    }
   };
 
   return (
