@@ -1,17 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { Link } from "react-router-dom";
 import logoSrc from "./assets/maniya-logo.png";
-
-// ---- MaNiYa brand tokens ----
-const T = {
-  bg: "#faf8f4",
-  ink: "#33302b",
-  sub: "#7d7668",
-  alert: "#d7263d",
-  alertDark: "#b01e31",
-  cream: "#fdf1ec",
-  line: "#e8e2d6",
-  accent: "#f2a93b",
-};
+import { T } from "./brand.js";
 
 const FONT_LINK =
   "https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap";
@@ -483,6 +473,21 @@ export default function App() {
           写真1枚でつくれます。1枚につき1匹分の情報を記入してください。
           L判サイズなので、コンビニの写真プリントでそのまま印刷できます。
         </p>
+        <Link
+          to="/five-freedoms"
+          style={{
+            display: "inline-block",
+            marginTop: 16,
+            fontSize: 13,
+            fontWeight: 700,
+            color: T.alert,
+            textDecoration: "none",
+            borderBottom: `1.5px solid ${T.alert}`,
+            paddingBottom: 2,
+          }}
+        >
+          → 英国発「5つの自由」診断はこちら
+        </Link>
       </header>
 
       {/* body */}
