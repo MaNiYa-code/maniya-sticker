@@ -1,0 +1,11 @@
+{
+  "redirects": [
+    {
+      "source": "/",
+      "has": [{ "type": "host", "value": "maniya-five-freedoms.vercel.app" }],
+      "destination": "/five-freedoms",
+      "permanent": false
+    }
+  ],
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}
