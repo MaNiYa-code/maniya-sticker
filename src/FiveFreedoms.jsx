@@ -7,10 +7,10 @@ import { T } from "./brand.js";
 // used on the sticker page — an editorial serif system (newspaper-like)
 // so this page reads as its own thing, not a reskinned template. ----
 const FONT_LINK =
-  "https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,500;0,700;0,900;1,600;1,700&display=swap";
+  "https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,500;0,700;0,900;1,600;1,700&family=Dancing+Script:wght@600;700&display=swap";
 const FAM_JA = '"Shippori Mincho", "Hiragino Mincho ProN", "Yu Mincho", serif';
 const FAM_EN = '"Playfair Display", "Shippori Mincho", serif';
-const FAM_MIX = '"Playfair Display", "Shippori Mincho", "Hiragino Mincho ProN", serif';
+const FAM_SCRIPT = '"Dancing Script", "Shippori Mincho", cursive';
 
 // ---- content: UK Five Freedoms, checklist items ----
 const FREEDOMS = [
@@ -160,6 +160,128 @@ function ChecklistItem({ ja, en, checked, onToggle }) {
   );
 }
 
+// ---------- ornamental helpers ----------
+function drawSparkle(ctx, cx, cy, size, color) {
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - size);
+  ctx.quadraticCurveTo(cx + size * 0.15, cy - size * 0.15, cx + size, cy);
+  ctx.quadraticCurveTo(cx + size * 0.15, cy + size * 0.15, cx, cy + size);
+  ctx.quadraticCurveTo(cx - size * 0.15, cy + size * 0.15, cx - size, cy);
+  ctx.quadraticCurveTo(cx - size * 0.15, cy - size * 0.15, cx, cy - size);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawFrameTicks(ctx, x, y, w, h, spacing, size, color) {
+  ctx.save();
+  ctx.fillStyle = color;
+  const drawTick = (cx, cy) => {
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - size);
+    ctx.lineTo(cx + size, cy);
+    ctx.lineTo(cx, cy + size);
+    ctx.lineTo(cx - size, cy);
+    ctx.closePath();
+    ctx.fill();
+  };
+  for (let px = x + spacing / 2; px < x + w; px += spacing) {
+    drawTick(px, y);
+    drawTick(px, y + h);
+  }
+  for (let py = y + spacing / 2; py < y + h; py += spacing) {
+    drawTick(x, py);
+    drawTick(x + w, py);
+  }
+  ctx.restore();
+}
+
+function drawCornerOrnament(ctx, x, y, sx, sy, color) {
+  // two nested arcs plus a small diamond, oriented into the given corner
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.translate(x, y);
+  ctx.scale(sx, sy);
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.arc(0, 0, 34, 0, Math.PI / 2);
+  ctx.stroke();
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(0, 0, 24, 0, Math.PI / 2);
+  ctx.stroke();
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(46, 0);
+  ctx.lineTo(52, 6);
+  ctx.lineTo(46, 12);
+  ctx.lineTo(40, 6);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(0, 46);
+  ctx.lineTo(6, 52);
+  ctx.lineTo(12, 46);
+  ctx.lineTo(6, 40);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawSeal(ctx, cx, cy, r, color, ink) {
+  ctx.save();
+  // scalloped rosette edge
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  const spikes = 18;
+  for (let i = 0; i < spikes; i++) {
+    const a1 = (i / spikes) * Math.PI * 2;
+    const a2 = ((i + 0.5) / spikes) * Math.PI * 2;
+    const rOut = r * 1.08;
+    const rIn = r * 0.92;
+    ctx.lineTo(cx + Math.cos(a1) * rOut, cy + Math.sin(a1) * rOut);
+    ctx.lineTo(cx + Math.cos(a2) * rIn, cy + Math.sin(a2) * rIn);
+  }
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * 0.8, 0, Math.PI * 2);
+  ctx.fillStyle = "#fff8ec";
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = color;
+  ctx.stroke();
+
+  ctx.strokeStyle = ink;
+  ctx.lineWidth = 4;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.beginPath();
+  ctx.moveTo(cx - r * 0.32, cy);
+  ctx.lineTo(cx - r * 0.08, cy + r * 0.24);
+  ctx.lineTo(cx + r * 0.34, cy - r * 0.26);
+  ctx.stroke();
+
+  ctx.fillStyle = ink;
+  ctx.textAlign = "center";
+  ctx.font = `700 13px ${FAM_EN}`;
+  try {
+    ctx.letterSpacing = "1px";
+  } catch {
+    /* noop */
+  }
+  ctx.fillText("COMPLETE", cx, cy + r * 0.52);
+  try {
+    ctx.letterSpacing = "0px";
+  } catch {
+    /* noop */
+  }
+  ctx.restore();
+}
+
 // ---------- certificate canvas ----------
 function drawCertificate(canvas, { petName, ownerName, logo, dateStr, certNo }) {
   const W = 1600,
@@ -171,33 +293,21 @@ function drawCertificate(canvas, { petName, ownerName, logo, dateStr, certNo }) 
   ctx.fillStyle = T.cream;
   ctx.fillRect(0, 0, W, H);
 
-  // triple hairline diploma frame — sharp corners on purpose
+  // ornate double frame with a ticked band between the rules
   const m = 46;
   ctx.strokeStyle = T.ink;
   ctx.lineWidth = 2;
   ctx.strokeRect(m, m, W - m * 2, H - m * 2);
-  ctx.lineWidth = 6;
-  ctx.strokeRect(m + 14, m + 14, W - (m + 14) * 2, H - (m + 14) * 2);
-  ctx.lineWidth = 1.5;
-  ctx.strokeRect(m + 26, m + 26, W - (m + 26) * 2, H - (m + 26) * 2);
+  ctx.lineWidth = 1.2;
+  ctx.strokeRect(m + 30, m + 30, W - (m + 30) * 2, H - (m + 30) * 2);
+  drawFrameTicks(ctx, m + 14, m + 14, W - (m + 14) * 2, H - (m + 14) * 2, 30, 3, T.accent);
 
-  // red corner brackets
-  ctx.strokeStyle = T.alert;
-  ctx.lineWidth = 4;
-  const cl = 46,
-    co = 16;
   [
-    [co, co, 1, 1],
-    [W - co, co, -1, 1],
-    [co, H - co, 1, -1],
-    [W - co, H - co, -1, -1],
-  ].forEach(([x, y, dx, dy]) => {
-    ctx.beginPath();
-    ctx.moveTo(x, y + cl * dy);
-    ctx.lineTo(x, y);
-    ctx.lineTo(x + cl * dx, y);
-    ctx.stroke();
-  });
+    [m, m, 1, 1],
+    [W - m, m, -1, 1],
+    [m, H - m, 1, -1],
+    [W - m, H - m, -1, -1],
+  ].forEach(([x, y, sx, sy]) => drawCornerOrnament(ctx, x, y, sx, sy, T.accent));
 
   ctx.textAlign = "center";
 
@@ -207,70 +317,90 @@ function drawCertificate(canvas, { petName, ownerName, logo, dateStr, certNo }) 
     /* not all browsers support letterSpacing on canvas */
   }
   ctx.fillStyle = T.sub;
-  ctx.font = `italic 600 22px ${FAM_EN}`;
-  ctx.fillText("SPECIAL EDITION · CERTIFICATE OF ACHIEVEMENT", W / 2, 118);
+  ctx.font = `600 20px ${FAM_EN}`;
+  ctx.fillText("SPECIAL EDITION · CERTIFICATE OF ACHIEVEMENT", W / 2, 112);
+
+  if (logo) {
+    const lh = 56;
+    const lw = (logo.width / logo.height) * lh;
+    ctx.drawImage(logo, W / 2 - lw / 2, 130, lw, lh);
+  }
+
+  ctx.fillStyle = T.ink;
+  ctx.font = `900 88px ${FAM_EN}`;
+  ctx.fillText("CERTIFICATE", W / 2, 300);
+  try {
+    ctx.letterSpacing = "0px";
+  } catch {
+    /* noop */
+  }
+  ctx.font = `700 36px ${FAM_JA}`;
+  ctx.fillText("「５つの自由」達成認定証", W / 2, 348);
+
+  drawSparkle(ctx, W / 2 - 300, 268, 12, T.accent);
+  drawSparkle(ctx, W / 2 + 300, 268, 12, T.accent);
+
+  // ornamental rule with diamond
+  ctx.strokeStyle = T.ink;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(W / 2 - 220, 384);
+  ctx.lineTo(W / 2 - 14, 384);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(W / 2 + 220, 384);
+  ctx.lineTo(W / 2 + 14, 384);
+  ctx.stroke();
+  ctx.fillStyle = T.alert;
+  ctx.beginPath();
+  ctx.moveTo(W / 2, 376);
+  ctx.lineTo(W / 2 + 8, 384);
+  ctx.lineTo(W / 2, 392);
+  ctx.lineTo(W / 2 - 8, 384);
+  ctx.closePath();
+  ctx.fill();
+
+  try {
+    ctx.letterSpacing = "3px";
+  } catch {
+    /* noop */
+  }
+  ctx.fillStyle = T.sub;
+  ctx.font = `600 20px ${FAM_EN}`;
+  ctx.fillText("THIS CERTIFICATE IS PROUDLY PRESENTED TO / これは、", W / 2, 438);
   try {
     ctx.letterSpacing = "0px";
   } catch {
     /* noop */
   }
 
-  if (logo) {
-    const lh = 64;
-    const lw = (logo.width / logo.height) * lh;
-    ctx.drawImage(logo, W / 2 - lw / 2, 140, lw, lh);
-  }
-
-  ctx.fillStyle = T.ink;
-  ctx.font = `italic 900 92px ${FAM_EN}`;
-  ctx.fillText("Certificate", W / 2, 320);
-  ctx.font = `700 42px ${FAM_JA}`;
-  ctx.fillText("「５つの自由」達成認定証", W / 2, 372);
-
-  // ornamental rule with diamond
-  ctx.strokeStyle = T.ink;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(W / 2 - 220, 404);
-  ctx.lineTo(W / 2 - 14, 404);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(W / 2 + 220, 404);
-  ctx.lineTo(W / 2 + 14, 404);
-  ctx.stroke();
-  ctx.fillStyle = T.alert;
-  ctx.beginPath();
-  ctx.moveTo(W / 2, 396);
-  ctx.lineTo(W / 2 + 8, 404);
-  ctx.lineTo(W / 2, 412);
-  ctx.lineTo(W / 2 - 8, 404);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.fillStyle = T.sub;
-  ctx.font = `500 22px ${FAM_JA}`;
-  ctx.fillText("This certifies that / これは、", W / 2, 460);
-
   const name = petName?.trim() || "きみ";
   ctx.fillStyle = T.ink;
-  const nameSize = name.length > 10 ? 56 : name.length > 6 ? 68 : 84;
-  ctx.font = `italic 700 ${nameSize}px ${FAM_MIX}`;
-  ctx.fillText(name, W / 2, 540);
+  const nameSize = name.length > 10 ? 62 : name.length > 6 ? 76 : 94;
+  ctx.font = `700 ${nameSize}px ${FAM_SCRIPT}`;
+  ctx.fillText(name, W / 2, 520);
+  const nameWidth = ctx.measureText(name).width;
+  ctx.strokeStyle = T.line;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(W / 2 - nameWidth / 2 - 30, 542);
+  ctx.lineTo(W / 2 + nameWidth / 2 + 30, 542);
+  ctx.stroke();
 
-  ctx.fillStyle = T.ink;
-  ctx.font = `500 26px ${FAM_JA}`;
-  ctx.fillText("が、下記「５つの自由」の基準をすべて満たしていることを、", W / 2, 592);
-  ctx.fillText("MaNiYa はここに証します。", W / 2, 628);
+  ctx.fillStyle = T.sub;
+  ctx.font = `500 24px ${FAM_JA}`;
+  ctx.fillText("が、下記「５つの自由」の基準をすべて満たしていることを、", W / 2, 588);
+  ctx.fillText("MaNiYa はここに証します。", W / 2, 620);
 
   // five freedom badges
   const labels = ["Hunger", "Discomfort", "Pain", "Behaviour", "Fear"];
-  const bw = 220;
+  const bw = 210;
   const startX = W / 2 - (bw * 5) / 2 + bw / 2;
-  const by = 730;
+  const by = 700;
   for (let i = 0; i < 5; i++) {
     const cx = startX + i * bw;
     ctx.beginPath();
-    ctx.arc(cx, by, 40, 0, Math.PI * 2);
+    ctx.arc(cx, by, 36, 0, Math.PI * 2);
     ctx.fillStyle = "#fff";
     ctx.fill();
     ctx.lineWidth = 2;
@@ -278,70 +408,74 @@ function drawCertificate(canvas, { petName, ownerName, logo, dateStr, certNo }) 
     ctx.stroke();
 
     ctx.fillStyle = T.ink;
-    ctx.font = `700 26px ${FAM_EN}`;
+    ctx.font = `700 24px ${FAM_EN}`;
     ctx.fillText(FREEDOMS[i].numeral, cx, by - 3);
 
     ctx.strokeStyle = T.alert;
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.moveTo(cx - 12, by + 16);
-    ctx.lineTo(cx - 3, by + 25);
-    ctx.lineTo(cx + 14, by + 6);
+    ctx.moveTo(cx - 11, by + 15);
+    ctx.lineTo(cx - 3, by + 23);
+    ctx.lineTo(cx + 13, by + 5);
     ctx.stroke();
 
     ctx.fillStyle = T.sub;
-    ctx.font = `italic 500 15px ${FAM_EN}`;
-    ctx.fillText(labels[i], cx, by + 62);
+    ctx.font = `italic 500 14px ${FAM_EN}`;
+    ctx.fillText(labels[i], cx, by + 58);
   }
 
-  // checked-by line (optional)
-  let y = 850;
-  if (ownerName?.trim()) {
-    ctx.fillStyle = T.sub;
-    ctx.font = `500 20px ${FAM_JA}`;
-    ctx.fillText(`確認者 / Checked by：${ownerName.trim()}`, W / 2, y);
-    y += 40;
+  // two-signature layout with a gold seal between them
+  const sigY = 900;
+  const leftX = W / 2 - 340;
+  const rightX = W / 2 + 340;
+
+  ctx.font = `700 34px ${FAM_SCRIPT}`;
+  ctx.fillStyle = T.ink;
+  const checker = ownerName?.trim();
+  if (checker) {
+    ctx.fillText(checker, leftX, sigY - 14);
   }
+  ctx.strokeStyle = T.ink;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(leftX - 150, sigY);
+  ctx.lineTo(leftX + 150, sigY);
+  ctx.stroke();
+  ctx.font = `500 16px ${FAM_EN}`;
+  ctx.fillStyle = T.sub;
+  ctx.fillText("CHECKED BY / 確認者", leftX, sigY + 26);
+
+  ctx.font = `700 34px ${FAM_SCRIPT}`;
+  ctx.fillStyle = T.ink;
+  ctx.fillText("MaNiYa Editorial", rightX, sigY - 14);
+  ctx.strokeStyle = T.ink;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(rightX - 150, sigY);
+  ctx.lineTo(rightX + 150, sigY);
+  ctx.stroke();
+  ctx.font = `500 16px ${FAM_EN}`;
+  ctx.fillStyle = T.sub;
+  ctx.fillText("ISSUED BY / 発行", rightX, sigY + 26);
+
+  drawSeal(ctx, W / 2, sigY - 40, 58, T.accent, T.ink);
 
   // date / cert no row
   ctx.font = `500 20px ${FAM_JA}`;
   ctx.fillStyle = T.sub;
   ctx.textAlign = "left";
-  ctx.fillText(`発行日 / Date：${dateStr}`, m + 90, 960);
+  ctx.fillText(`発行日 / Date：${dateStr}`, m + 90, 1000);
   ctx.textAlign = "right";
-  ctx.fillText(`証書番号 / No.：${certNo}`, W - m - 90, 960);
+  ctx.fillText(`証書番号 / No.：${certNo}`, W - m - 90, 1000);
   ctx.textAlign = "center";
-
-  ctx.beginPath();
-  ctx.moveTo(W / 2, 920);
-  ctx.lineTo(W / 2, 1000);
-  ctx.strokeStyle = T.line;
-  ctx.lineWidth = 1;
-  ctx.stroke();
-
-  // signature flourish
-  ctx.textAlign = "right";
-  ctx.fillStyle = T.ink;
-  ctx.font = `italic 600 30px ${FAM_EN}`;
-  ctx.fillText("MaNiYa Editorial", W - m - 90, 1000);
-  ctx.strokeStyle = T.ink;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(W - m - 260, 1014);
-  ctx.lineTo(W - m - 90, 1014);
-  ctx.stroke();
-  ctx.font = `italic 400 14px ${FAM_EN}`;
-  ctx.fillStyle = T.sub;
-  ctx.fillText("Signature / 署名", W - m - 90, 1034);
 
   // footer small print
-  ctx.textAlign = "center";
   ctx.fillStyle = T.sub;
   ctx.font = `italic 400 16px ${FAM_EN}`;
   ctx.fillText(
     "Issued by MaNiYa · Based on the Five Freedoms, UK Farm Animal Welfare Council (FAWC), 1979",
     W / 2,
-    1070
+    1050
   );
 }
 
@@ -360,11 +494,13 @@ export default function FiveFreedoms() {
     l.href = FONT_LINK;
     document.head.appendChild(l);
     const loads = [
-      'italic 900 92px "Playfair Display"',
-      'italic 700 84px "Playfair Display"',
-      'italic 600 30px "Playfair Display"',
-      '700 42px "Shippori Mincho"',
-      '500 26px "Shippori Mincho"',
+      '900 88px "Playfair Display"',
+      '600 20px "Playfair Display"',
+      '500 16px "Playfair Display"',
+      '700 94px "Dancing Script"',
+      '700 34px "Dancing Script"',
+      '700 36px "Shippori Mincho"',
+      '500 24px "Shippori Mincho"',
     ];
     if (document.fonts) {
       Promise.all([document.fonts.ready, ...loads.map((f) => document.fonts.load(f).catch(() => {}))]).then(() =>
